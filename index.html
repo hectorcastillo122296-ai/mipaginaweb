@@ -1,85 +1,141 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mi página</title>
-  <link rel="stylesheet" href="estilos.css" />
+  <title>Tribu BI – Prueba</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- Barra superior -->
-  <header class="topbar">
-    <div class="container topbar__content">
-      <a class="logo" href="#">LOGO</a>
-      <nav class="nav">
-        <a href="#inicio">Inicio</a>
-        <a href="#precios">Precios</a>
-        <a href="#productos">Productos</a>
-        <a class="btn btn--ghost" href="#entrar">Entrar</a>
-      </nav>
+  <!-- Header / Hero -->
+  <header class="hero">
+    <div class="container">
+      <h1 class="brand">Tribu BI</h1>
+      <p class="subtitle">Prueba</p>
+
+      <div class="cta-row">
+        <a class="btn" href="#docs">Explore Documents</a>
+        <button id="openChat" class="btn btn-secondary">Start AI Chat</button>
+      </div>
     </div>
   </header>
 
-  <main id="inicio">
-    <!-- Hero -->
-    <section class="hero container">
-      <h1>
-        NUESTRO <br />
-        COMPROMISO <br />
-        ERES TÚ
-      </h1>
-      <button class="btn" data-action="comprar-hero">Comprar</button>
-    </section>
+  <!-- What is BI -->
+  <section class="card container" id="what-is-bi">
+    <h2>📊 What is Business Intelligence?</h2>
 
-    <!-- Productos -->
-    <section id="productos" class="productos container">
-      <article class="card producto">
-        <img src="casa.png" alt="Casa" loading="lazy" />
-        <div class="card__body">
-          <h2>Comprar casa</h2>
-          <p>Viviendas listas para mudarte, con garantía total.</p>
-          <button class="btn" data-producto="Casa">Comprar</button>
-        </div>
-      </article>
-
-      <article class="card producto">
-        <img src="avion.png" alt="Avión" loading="lazy" />
-        <div class="card__body">
-          <h2>Comprar avión</h2>
-          <p>Aeronaves certificadas para uso privado y corporativo.</p>
-          <button class="btn" data-producto="Avión">Comprar</button>
-        </div>
-      </article>
-
-      <article class="card producto">
-        <img src="yate.png" alt="Yate" loading="lazy" />
-        <div class="card__body">
-          <h2>Comprar yate</h2>
-          <p>Yates de lujo para navegar con total comodidad.</p>
-          <button class="btn" data-producto="Yate">Comprar</button>
-        </div>
-      </article>
-    </section>
-
-    <!-- Precios (placeholder) -->
-    <section id="precios" class="precios container">
-      <h2>Precios</h2>
-      <p>Contáctanos para una cotización personalizada.</p>
-    </section>
-
-    <!-- Entrar (placeholder) -->
-    <section id="entrar" class="entrar container">
-      <h2>Entrar</h2>
-      <p>Muy pronto podrás iniciar sesión.</p>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="container">
-      <small>© 2025 Mi Empresa. Todos los derechos reservados.</small>
+    <div class="callout">
+      <h3>Bottom Line Up Front (BLUF)</h3>
+      <p>
+        Business Intelligence (BI) transforma datos crudos en insights accionables que
+        impulsan decisiones estratégicas, mejoran la eficiencia operativa y generan
+        ventajas competitivas a través de visualización, analítica y reporting.
+      </p>
     </div>
-  </footer>
 
-  <script src="script.js"></script>
+    <div class="grid two">
+      <div>
+        <h4>⚡ Key Benefits</h4>
+        <ul class="bullets">
+          <li>Decisiones basadas en datos</li>
+          <li>Eficiencia operativa</li>
+          <li>Monitoreo en tiempo real</li>
+          <li>Predicción y tendencias</li>
+          <li>Mejor posicionamiento competitivo</li>
+        </ul>
+      </div>
+      <div>
+        <h4>🧩 Core Components</h4>
+        <ul class="bullets">
+          <li>Data warehousing & integration</li>
+          <li>Herramientas de analítica y reporting</li>
+          <li>Dashboards y visualizaciones</li>
+          <li>Self‑service analytics</li>
+          <li>Acceso móvil y en la nube</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Platform Features -->
+  <section class="container" id="features">
+    <h2 class="center">Platform Features</h2>
+    <p class="muted center">Todo lo que necesitas para gestionar y aprovechar tu conocimiento BI</p>
+
+    <div class="grid four">
+      <article class="feature">
+        <div class="icon">📄</div>
+        <h3>Document Library</h3>
+        <p>Sube, organiza y busca documentos BI con seguridad empresarial.</p>
+        <a id="docs" class="btn btn-ghost" href="#">Browse Docs</a>
+      </article>
+
+      <article class="feature">
+        <div class="icon">📘</div>
+        <h3>BI Playbooks</h3>
+        <p>Guías paso a paso desde ingestión de datos hasta despliegue de modelos.</p>
+        <button class="btn btn-ghost">View Playbooks</button>
+      </article>
+
+      <article class="feature">
+        <div class="icon">🤖</div>
+        <h3>AI Assistant</h3>
+        <p>Respuestas instantáneas con búsqueda RAG y recomendaciones.</p>
+        <button class="btn btn-ghost" id="openChat2">Start Chat</button>
+      </article>
+
+      <article class="feature">
+        <div class="icon">👥</div>
+        <h3>Team Collaboration</h3>
+        <p>Accesos por rol: viewer, editor y admin para colaborar seguro.</p>
+        <button class="btn btn-ghost">Get Started</button>
+      </article>
+    </div>
+
+    <div class="grid two mt-xl">
+      <article class="card">
+        <h4>🛡️ Enterprise Security</h4>
+        <ul class="bullets">
+          <li>Antivirus en todas las subidas</li>
+          <li>Control de acceso por roles</li>
+          <li>Validación de archivos</li>
+          <li>Encriptación en reposo</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h4>⚡ AI‑Powered Insights</h4>
+        <ul class="bullets">
+          <li>Búsqueda de documentos con RAG</li>
+          <li>Recomendaciones contextuales</li>
+          <li>Generación automática de métricas</li>
+          <li>Sugerencias de siguientes pasos</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- Floating chat button -->
+  <button id="chatFab" aria-label="Abrir chat">💬</button>
+
+  <!-- Chat Panel -->
+  <div id="chatPanel" class="chat hidden" role="dialog" aria-modal="true" aria-labelledby="chatTitle">
+    <div class="chat-header">
+      <h3 id="chatTitle">Asistente BI</h3>
+      <button id="closeChat" class="icon-btn" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+
+    <form id="chatForm" class="chat-input" autocomplete="off">
+      <input id="userInput" type="text" placeholder="Escribe tu pregunta… (Enter para enviar)" required />
+      <button class="btn" type="submit">Enviar</button>
+    </form>
+  </div>
+
+  <script src="app.js" defer></script>
 </body>
 </html>

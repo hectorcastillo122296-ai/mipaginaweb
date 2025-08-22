@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mi página</title>
+  <link rel="stylesheet" href="estilos.css" />
+</head>
+<body>
+  <!-- Barra superior -->
+  <header class="topbar">
+    <div class="container topbar__content">
+      <a class="logo" href="#">LOGO</a>
+      <nav class="nav">
+        <a href="#inicio">Inicio</a>
+        <a href="#precios">Precios</a>
+        <a href="#productos">Productos</a>
+        <a class="btn btn--ghost" href="#entrar">Entrar</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="inicio">
+    <!-- Hero -->
+    <section class="hero container">
+      <h1>
+        NUESTRO <br />
+        COMPROMISO <br />
+        ERES TÚ
+      </h1>
+      <button class="btn" data-action="comprar-hero">Comprar</button>
+    </section>
+
+    <!-- Productos -->
+    <section id="productos" class="productos container">
+      <article class="card producto">
+        <img src="casa.png" alt="Casa" loading="lazy" />
+        <div class="card__body">
+          <h2>Comprar casa</h2>
+          <p>Viviendas listas para mudarte, con garantía total.</p>
+          <button class="btn" data-producto="Casa">Comprar</button>
+        </div>
+      </article>
+
+      <article class="card producto">
+        <img src="avion.png" alt="Avión" loading="lazy" />
+        <div class="card__body">
+          <h2>Comprar avión</h2>
+          <p>Aeronaves certificadas para uso privado y corporativo.</p>
+          <button class="btn" data-producto="Avión">Comprar</button>
+        </div>
+      </article>
+
+      <article class="card producto">
+        <img src="yate.png" alt="Yate" loading="lazy" />
+        <div class="card__body">
+          <h2>Comprar yate</h2>
+          <p>Yates de lujo para navegar con total comodidad.</p>
+          <button class="btn" data-producto="Yate">Comprar</button>
+        </div>
+      </article>
+    </section>
+
+    <!-- Precios (placeholder) -->
+    <section id="precios" class="precios container">
+      <h2>Precios</h2>
+      <p>Contáctanos para una cotización personalizada.</p>
+    </section>
+
+    <!-- Entrar (placeholder) -->
+    <section id="entrar" class="entrar container">
+      <h2>Entrar</h2>
+      <p>Muy pronto podrás iniciar sesión.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <small>© 2025 Mi Empresa. Todos los derechos reservados.</small>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

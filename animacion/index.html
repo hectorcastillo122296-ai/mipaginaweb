@@ -1,0 +1,623 @@
+<title>Del dato a la decisión</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600&family=Sora:wght@500;600;700&display=swap">
+<style>
+/* Layout: escenario fijo 1920x1080 escalado al visor; barra de control debajo. Diseño oscuro deliberado (una sola apariencia). */
+:root {
+  --bg: #050B1F;
+  --deep: #0A1533;
+  --card: #0C1A3D;
+  --line: #2A3F78;
+  --ink: #EAF0FF;
+  --muted: #8FA3D6;
+  --yellow: #FFE600;
+  --font-display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); overflow: hidden; }
+.app {
+  height: 100%; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.viewport { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; }
+.frame { position: relative; overflow: hidden; border-radius: 12px; box-shadow: 0 0 0 1px var(--line); background: var(--bg); }
+.stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: var(--bg); }
+.stage canvas, .stage svg { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+
+/* Textos de escena */
+.caption { position: absolute; left: 120px; top: 92px; width: 1240px; }
+.caption .eyebrow { font: 500 20px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--yellow); margin-bottom: 22px; }
+.caption .headline { font: 600 66px/1.08 var(--font-display); letter-spacing: -0.025em; margin: 0; text-wrap: balance; }
+.caption .headline .row { display: block; }
+.caption .headline .hl { color: var(--yellow); }
+.caption .sub { font: 500 25px/1.35 var(--font-body); color: var(--muted); margin-top: 18px; }
+.word { display: inline-block; margin-right: .26em; will-change: transform, opacity, filter; }
+
+.hud { position: absolute; right: 120px; top: 98px; font: 500 15px/1 var(--font-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.hud b { color: var(--yellow); font-weight: 500; }
+
+.tracker { position: absolute; left: 120px; right: 120px; top: 1000px; height: 40px; }
+.tracker .rail, .tracker .fill { position: absolute; left: 0; top: 0; height: 2px; }
+.tracker .rail { right: 0; background: var(--line); }
+.tracker .fill { background: var(--yellow); box-shadow: 0 0 12px var(--yellow); }
+.tracker .stop { position: absolute; top: -4px; transform: translateX(-1px); }
+.tracker .stop i { display: block; width: 10px; height: 10px; border-radius: 50%; background: var(--deep); box-shadow: inset 0 0 0 2px var(--line); }
+.tracker .stop span { display: block; margin-top: 12px; font: 500 13px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.tracker .stop.on i { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+.tracker .stop.on span { color: var(--ink); }
+
+.closing { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+.closing .inner { width: 1760px; }
+.closing .eyebrow { font: 500 24px/1 var(--font-mono); letter-spacing: .3em; text-transform: uppercase; color: var(--yellow); }
+.closing .title { font: 600 80px/1.06 var(--font-display); letter-spacing: -0.03em; margin: 30px 0 0; white-space: nowrap; }
+.closing .rule { height: 3px; width: 560px; margin: 34px auto 30px; background: var(--yellow); box-shadow: 0 0 18px var(--yellow); transform-origin: 50% 50%; }
+.closing .sub { font: 500 32px/1.4 var(--font-body); color: var(--muted); margin: 0 auto; max-width: 44ch; text-wrap: balance; }
+.closing .sub b { color: var(--ink); font-weight: 600; }
+
+/* Controles */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.controls button {
+  font: 500 13px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink); background: var(--deep); border: 1px solid var(--line); border-radius: 999px;
+  padding: 10px 16px; cursor: pointer;
+}
+.controls button.primary { background: var(--yellow); border-color: var(--yellow); color: var(--bg); }
+.controls button:hover { border-color: var(--muted); }
+.controls button:focus-visible, .controls input:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
+.controls input[type=range] { flex: 1 1 220px; min-width: 0; accent-color: var(--yellow); }
+.controls .clock { font-variant-numeric: tabular-nums; min-width: 15ch; text-align: right; }
+
+body.render .app { padding: 0; gap: 0; }
+body.render .controls { display: none; }
+body.render .frame { border-radius: 0; box-shadow: none; }
+</style>
+
+<div class="app">
+  <div class="viewport" id="viewport">
+    <div class="frame" id="frame">
+      <div class="stage" id="stage" aria-label="Animación: del dato a la decisión" role="img">
+        <canvas id="bg" width="1920" height="1080"></canvas>
+        <svg id="world" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="hud" id="hud">Del dato <b>→</b> a la decisión</div>
+        <div class="caption" id="caption"></div>
+        <div class="tracker" id="tracker"><div class="rail"></div><div class="fill" id="trackFill"></div></div>
+        <div class="closing" id="closing">
+          <div class="inner">
+            <div class="eyebrow" id="cEyebrow">Gobierno de Datos</div>
+            <h2 class="title" id="cTitle"></h2>
+            <div class="rule" id="cRule"></div>
+            <p class="sub" id="cSub">para convertir información en <b>valor</b> y preparar el futuro de la <b>IA</b>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="controls">
+    <button id="play" class="primary" type="button">Pausar</button>
+    <button id="restart" type="button">Reiniciar</button>
+    <input id="scrub" type="range" min="0" max="20000" step="10" value="0" aria-label="Posición en la línea de tiempo">
+    <span class="clock" id="clock">00.00 / 20.00 s</span>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const DUR = 20, W = 1920, H = 1080;
+  const Y = '#FFE600', INK = '#EAF0FF', MUTED = '#8FA3D6', LINE = '#2A3F78', CARD = '#0C1A3D', PANEL = '#13254F', BAR = '#1D3366';
+  const RENDER = !!window.__RENDER || /[?&]render\b/.test(location.search);
+  if (RENDER) document.body.classList.add('render');
+
+  /* ---------- utilidades ---------- */
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const prog = (t, a, b) => clamp((t - a) / (b - a));
+  const easeIO = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  const easeOut = k => 1 - Math.pow(1 - k, 3);
+  const env = (t, a, b, fi = .35, fo = .35) => Math.min(prog(t, a, a + fi), 1 - prog(t, b - fo, b));
+  function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let x = Math.imul(seed ^ seed >>> 15, 1 | seed); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; }; }
+  const NS = 'http://www.w3.org/2000/svg';
+  function S(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs || {}) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+  function T(parent, x, y, text, o = {}) {
+    const e = S('text', { x, y, fill: o.fill || INK, 'font-family': o.family || 'Sora, system-ui, sans-serif', 'font-size': o.size || 16, 'font-weight': o.weight || 500, 'text-anchor': o.anchor || 'middle', 'letter-spacing': o.ls || 0 }, parent);
+    e.textContent = text; return e;
+  }
+  const MONO = 'JetBrains Mono, ui-monospace, monospace', BODY = 'Manrope, system-ui, sans-serif';
+
+  /* ---------- SVG base ---------- */
+  const svg = document.getElementById('world');
+  const defs = S('defs', {}, svg);
+  const blur = S('filter', { id: 'blur', x: '-50%', y: '-50%', width: '200%', height: '200%' }, defs);
+  S('feGaussianBlur', { stdDeviation: 6 }, blur);
+  const cardGrad = S('linearGradient', { id: 'cardFill', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+  S('stop', { offset: 0, 'stop-color': '#10214B' }, cardGrad); S('stop', { offset: 1, 'stop-color': '#0A1633' }, cardGrad);
+  const areaGrad = S('linearGradient', { id: 'areaFill', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+  S('stop', { offset: 0, 'stop-color': Y, 'stop-opacity': .35 }, areaGrad); S('stop', { offset: 1, 'stop-color': Y, 'stop-opacity': 0 }, areaGrad);
+
+  const cam = S('g', {}, svg);
+  const L = {};
+  ['ai', 'gov', 'lines', 'nodes', 'details', 'lineage', 'heads'].forEach(n => L[n] = S('g', {}, cam));
+
+  /* ---------- trazos animables ---------- */
+  const strokes = [];
+  function drawPath(parent, d, a, b, o = {}) {
+    const g = S('g', {}, parent);
+    const glow = S('path', { d, fill: 'none', stroke: o.color || Y, 'stroke-width': o.glowW || 10, 'stroke-linecap': 'round', opacity: .45, filter: 'url(#blur)' }, g);
+    const core = S('path', { d, fill: 'none', stroke: o.color || Y, 'stroke-width': o.w || 3, 'stroke-linecap': 'round' }, g);
+    const len = core.getTotalLength();
+    [glow, core].forEach(p => p.setAttribute('stroke-dasharray', len + ' ' + len));
+    const s = { g, glow, core, len, a, b, ease: o.ease || easeIO, head: o.head ? makeHead() : null, p: 0 };
+    strokes.push(s); return s;
+  }
+  function makeHead() {
+    const g = S('g', { opacity: 0 }, L.heads);
+    S('circle', { r: 20, fill: Y, opacity: .55, filter: 'url(#blur)' }, g);
+    S('circle', { r: 6.5, fill: '#FFF8B0' }, g);
+    return g;
+  }
+  function updateStroke(s, t) {
+    const p = s.ease(prog(t, s.a, s.b)); s.p = p;
+    const off = s.len * (1 - p);
+    s.core.setAttribute('stroke-dashoffset', off); s.glow.setAttribute('stroke-dashoffset', off);
+    s.g.setAttribute('opacity', p > 0 ? 1 : 0);
+    if (s.head) {
+      const vis = p > 0 && p < 1 ? 1 : clamp(1 - (t - s.b) / .25) * (p >= 1 ? 1 : 0);
+      s.head.setAttribute('opacity', vis);
+      if (vis > 0) { const pt = s.core.getPointAtLength(s.len * p); s.head.setAttribute('transform', `translate(${pt.x} ${pt.y})`); }
+    }
+  }
+
+  /* ---------- nodos de la arquitectura ---------- */
+  const NY = 470;
+  const NODES = [
+    { id: 'sap', x: 230, title: 'SAP', sub: 'Sistema origen', glow: [0.8, 3.3] },
+    { id: 'sql', x: 600, title: 'SQL', sub: 'Tablas de aterrizaje', glow: [3.5, 5.0] },
+    { id: 'trf', x: 960, title: 'Transformaciones', sub: 'Reglas y validación', glow: [4.6, 6.0] },
+    { id: 'dm', x: 1320, title: 'Data Marts', sub: 'Modelos de negocio', glow: [6.7, 9.0] },
+    { id: 'pbi', x: 1700, title: 'Power BI', sub: 'Indicadores', glow: [9.3, 12.0] }
+  ];
+  const ARRIVE = [0.15, 3.5, 4.6, 6.7, 9.3];
+  NODES.forEach((n, i) => {
+    n.g = S('g', {}, L.nodes);
+    n.halo = S('rect', { x: -100, y: -75, width: 200, height: 150, rx: 16, fill: 'none', stroke: Y, 'stroke-width': 14, opacity: 0, filter: 'url(#blur)' }, n.g);
+    S('rect', { x: -100, y: -75, width: 200, height: 150, rx: 16, fill: 'url(#cardFill)', stroke: LINE, 'stroke-width': 1.5 }, n.g);
+    n.ring = S('rect', { x: -100, y: -75, width: 200, height: 150, rx: 16, fill: 'none', stroke: Y, 'stroke-width': 2, opacity: 0 }, n.g);
+    n.inner = S('g', {}, n.g);
+    T(n.g, 0, 104, n.title, { size: 21, weight: 600 });
+    T(n.g, 0, 127, n.sub.toUpperCase(), { size: 11.5, family: MONO, fill: MUTED, ls: 1.4 });
+  });
+  const N = Object.fromEntries(NODES.map(n => [n.id, n]));
+
+  // SAP: registros del sistema transaccional
+  const sapRows = [];
+  S('rect', { x: -84, y: -60, width: 168, height: 18, rx: 5, fill: PANEL }, N.sap.inner);
+  T(N.sap.inner, -76, -47, 'ERP · TRANSACCIONES', { size: 9.5, family: MONO, fill: MUTED, anchor: 'start', ls: 1 });
+  [120, 92, 136, 104, 78].forEach((w, i) => {
+    const y = -32 + i * 18;
+    S('rect', { x: -84, y, width: w, height: 9, rx: 3, fill: BAR }, N.sap.inner);
+    sapRows.push(S('rect', { x: -84, y, width: w, height: 9, rx: 3, fill: Y, opacity: 0 }, N.sap.inner));
+  });
+  const sapDot = S('g', { opacity: 0 }, L.heads);
+  S('circle', { r: 16, fill: Y, opacity: .6, filter: 'url(#blur)' }, sapDot);
+  S('circle', { r: 6, fill: '#FFF8B0' }, sapDot);
+  const sapTag = S('g', { opacity: 0 }, L.details);
+  T(sapTag, 415, 438, 'UN REGISTRO', { size: 11, family: MONO, fill: Y, ls: 1.6 });
+
+  // SQL: base de datos
+  (g => {
+    S('path', { d: 'M-44 -36 v62 a44 13 0 0 0 88 0 v-62', fill: PANEL, stroke: '#3D5AA0', 'stroke-width': 1.5 }, g);
+    S('ellipse', { cx: 0, cy: -36, rx: 44, ry: 13, fill: BAR, stroke: '#3D5AA0', 'stroke-width': 1.5 }, g);
+    S('path', { d: 'M-44 -15 a44 13 0 0 0 88 0 M-44 6 a44 13 0 0 0 88 0', fill: 'none', stroke: '#3D5AA0', 'stroke-width': 1.2 }, g);
+  })(N.sql.inner);
+  N.sql.cap = S('ellipse', { cx: 0, cy: -36, rx: 44, ry: 13, fill: Y, opacity: 0 }, N.sql.inner);
+  const tables = [515, 600, 685].map((cx, i) => {
+    const g = S('g', { opacity: 0 }, L.details);
+    S('rect', { x: cx - 35, y: 622, width: 70, height: 44, rx: 5, fill: CARD, stroke: LINE, 'stroke-width': 1.2 }, g);
+    S('rect', { x: cx - 35, y: 622, width: 70, height: 10, rx: 5, fill: BAR }, g);
+    S('path', { d: `M${cx - 35} 643 h70 M${cx - 35} 654 h70 M${cx - 12} 632 v34 M${cx + 12} 632 v34`, stroke: LINE, 'stroke-width': 1 }, g);
+    T(g, cx, 684, 'LND_0' + (i + 1), { size: 10, family: MONO, fill: MUTED, ls: 1 });
+    const drop = S('circle', { r: 4.5, fill: Y, opacity: 0 }, L.heads);
+    return { g, cx, drop, t: 3.6 + i * 0.16 };
+  });
+
+  // Transformaciones: engranaje
+  N.trf.gear = S('g', {}, N.trf.inner);
+  (g => {
+    let d = ''; const teeth = 10, ro = 38, ri = 29;
+    for (let i = 0; i < teeth * 2; i++) {
+      const r = i % 2 ? ri : ro, a0 = (i / (teeth * 2)) * Math.PI * 2, a1 = ((i + 1) / (teeth * 2)) * Math.PI * 2;
+      d += (i ? 'L' : 'M') + (r * Math.cos(a0)).toFixed(1) + ' ' + (r * Math.sin(a0)).toFixed(1) + ' L' + (r * Math.cos(a1)).toFixed(1) + ' ' + (r * Math.sin(a1)).toFixed(1);
+    }
+    S('path', { d: d + 'Z', fill: PANEL, stroke: '#3D5AA0', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }, g);
+    S('circle', { r: 15, fill: CARD, stroke: '#3D5AA0', 'stroke-width': 1.5 }, g);
+  })(N.trf.gear);
+  N.trf.fx = T(N.trf.inner, 0, 5, 'f(x)', { size: 12, family: MONO, fill: MUTED });
+  const trfChips = ['Limpiar', 'Unir', 'Validar ✓'].map((txt, i) => chip(L.details, 860 + i * 100, 642, 90, txt, 4.6 + [0, .25, .55][i]));
+
+  // Data Marts: cubos por dominio
+  N.dm.cubes = [-52, 0, 52].map(cx => {
+    const g = S('g', {}, N.dm.inner), s = 22, cy = -2;
+    S('polygon', { points: `${cx - s},${cy - s / 2} ${cx},${cy} ${cx},${cy + s} ${cx - s},${cy + s / 2}`, fill: '#172B5C', stroke: '#4A6BC0', 'stroke-width': .8 }, g);
+    S('polygon', { points: `${cx + s},${cy - s / 2} ${cx},${cy} ${cx},${cy + s} ${cx + s},${cy + s / 2}`, fill: '#1F3A78', stroke: '#4A6BC0', 'stroke-width': .8 }, g);
+    const top = S('polygon', { points: `${cx},${cy - s} ${cx + s},${cy - s / 2} ${cx},${cy} ${cx - s},${cy - s / 2}`, fill: '#2B4790', stroke: '#4A6BC0', 'stroke-width': .8 }, g);
+    return { g, top };
+  });
+  const dmChips = ['Finanzas', 'Comercial', 'Operaciones'].map((txt, i) => chip(L.details, 1200 + i * 120, 642, 108, txt, 6.85 + i * .3));
+
+  // Power BI: tablero genérico (sin cifras)
+  (g => {
+    N.pbi.kpi = S('rect', { x: -84, y: -58, width: 76, height: 54, rx: 8, fill: PANEL, stroke: LINE, 'stroke-width': 1.2 }, g);
+    T(g, -76, -44, 'KPI', { size: 9.5, family: MONO, fill: MUTED, anchor: 'start', ls: 1.2 });
+    S('rect', { x: -76, y: -34, width: 26, height: 6, rx: 3, fill: '#3D5AA0' }, g);
+    S('rect', { x: -76, y: -22, width: 18, height: 6, rx: 3, fill: BAR }, g);
+    S('circle', { cx: -29, cy: -26, r: 12, fill: 'none', stroke: BAR, 'stroke-width': 4 }, g);
+    N.pbi.arc = S('circle', { cx: -29, cy: -26, r: 12, fill: 'none', stroke: Y, 'stroke-width': 4, 'stroke-dasharray': '75.4 75.4', 'stroke-dashoffset': 75.4, transform: 'rotate(-90 -29 -26)', 'stroke-linecap': 'round' }, g);
+    N.pbi.bars = [22, 34, 28, 46, 38].map((h, i) => ({ h, el: S('rect', { x: 6 + i * 16, y: -4, width: 10, height: 0, rx: 2, fill: i === 3 ? Y : '#3D5AA0' }, g) }));
+    const pts = []; for (let i = 0; i <= 12; i++) pts.push([-84 + i * 14, 40 - 10 * Math.sin(i * .7) - i * 1.2]);
+    const line = 'M' + pts.map(p => p.join(' ')).join(' L');
+    const clip = S('clipPath', { id: 'sparkClip' }, defs);
+    N.pbi.clip = S('rect', { x: -86, y: 0, width: 0, height: 60 }, clip);
+    const sg = S('g', { 'clip-path': 'url(#sparkClip)' }, g);
+    S('path', { d: line + ` L84 56 L-84 56Z`, fill: 'url(#areaFill)' }, sg);
+    S('path', { d: line, fill: 'none', stroke: Y, 'stroke-width': 2, 'stroke-linejoin': 'round' }, sg);
+  })(N.pbi.inner);
+
+  function chip(parent, cx, cy, w, text, t0) {
+    const g = S('g', { opacity: 0 }, parent);
+    const r = S('rect', { x: cx - w / 2, y: cy - 15, width: w, height: 30, rx: 15, fill: CARD, stroke: LINE, 'stroke-width': 1.2 }, g);
+    T(g, cx, cy + 5, text, { size: 13, family: BODY, weight: 600 });
+    return { g, r, t0, cy };
+  }
+  function showChip(c, t, out) {
+    const k = easeOut(prog(t, c.t0, c.t0 + .4)) * (out == null ? 1 : out);
+    c.g.setAttribute('opacity', k);
+    c.g.setAttribute('transform', `translate(0 ${(1 - k) * 14})`);
+    c.r.setAttribute('stroke', t > c.t0 && t < c.t0 + .9 ? Y : LINE);
+  }
+
+  /* ---------- hilo amarillo SAP → SQL → Transformaciones → Data Marts → Power BI ---------- */
+  function wave(x1, x2, y, amp) { const xm = (x1 + x2) / 2; return `M${x1} ${y} C${x1 + 50} ${y} ${xm - 40} ${y + amp} ${xm} ${y + amp} S${x2 - 50} ${y} ${x2} ${y}`; }
+  const SEG_T = [[1.5, 3.5], [4.0, 4.6], [5.6, 6.7], [8.2, 9.3]];
+  const segs = SEG_T.map(([a, b], i) => drawPath(L.lines, wave(NODES[i].x + 100, NODES[i + 1].x - 100, NY, i % 2 ? 22 : -22), a, b, { head: true }));
+  const flows = segs.map(s => [0, .5].map(() => S('circle', { r: 3.5, fill: '#FFF3A0', opacity: 0 }, L.lines)));
+
+  /* ---------- linaje del KPI (de Power BI hacia el origen) ---------- */
+  const TAG_Y = 350;
+  const lineageTags = ['Origen', 'Aterrizaje', 'Regla', 'Modelo', 'KPI'].map((txt, i) => {
+    const g = S('g', { opacity: 0 }, L.lineage), x = NODES[i].x, w = txt.length * 9 + 34;
+    S('rect', { x: x - w / 2, y: TAG_Y - 15, width: w, height: 30, rx: 15, fill: '#1A1A08', stroke: Y, 'stroke-width': 1.3 }, g);
+    T(g, x, TAG_Y + 5, txt.toUpperCase(), { size: 11.5, family: MONO, fill: Y, ls: 1.4 });
+    S('path', { d: `M${x} ${TAG_Y + 15} V${NY - 75}`, stroke: Y, 'stroke-width': 1.2, 'stroke-dasharray': '3 4', opacity: .7 }, g);
+    return g;
+  });
+  const LIN_T = [11.9, 11.55, 11.2, 10.85, 10.45];
+  const lineageArcs = [3, 2, 1, 0].map(i => {
+    const x1 = NODES[i + 1].x, x0 = NODES[i].x, id = 'lc' + i;
+    const clip = S('clipPath', { id }, defs);
+    const rect = S('rect', { x: x1, y: 200, width: 0, height: 200 }, clip);
+    const g = S('g', { 'clip-path': `url(#${id})` }, L.lineage);
+    S('path', { d: `M${x1} ${TAG_Y - 15} Q${(x0 + x1) / 2} ${TAG_Y - 85} ${x0} ${TAG_Y - 15}`, fill: 'none', stroke: Y, 'stroke-width': 2, 'stroke-dasharray': '7 7' }, g);
+    return { rect, x0, x1, a: LIN_T[i + 1], b: LIN_T[i] };
+  });
+
+  /* ---------- capa transversal de Gobierno de Datos ---------- */
+  const GX0 = 130, GX1 = 1800, GY0 = 770, GY1 = 870, GR = 22;
+  const govFill = S('rect', { x: GX0, y: GY0, width: GX1 - GX0, height: GY1 - GY0, rx: GR, fill: '#0B1838', opacity: 0 }, L.gov);
+  const govBorder = drawPath(L.gov, `M${GX0 + GR} ${GY0} H${GX1 - GR} A${GR} ${GR} 0 0 1 ${GX1} ${GY0 + GR} V${GY1 - GR} A${GR} ${GR} 0 0 1 ${GX1 - GR} ${GY1} H${GX0 + GR} A${GR} ${GR} 0 0 1 ${GX0} ${GY1 - GR} V${GY0 + GR} A${GR} ${GR} 0 0 1 ${GX0 + GR} ${GY0}Z`, 12.2, 13.1, { w: 2, glowW: 8 });
+  const govLabel = S('g', { opacity: 0 }, L.gov);
+  T(govLabel, 162, 812, 'GOBIERNO DE DATOS', { size: 12, family: MONO, fill: Y, anchor: 'start', ls: 1.8 });
+  T(govLabel, 162, 840, 'Capa transversal', { size: 20, weight: 600, anchor: 'start' });
+  const connectors = NODES.map((n, i) => drawPath(L.gov, `M${n.x} 610 V${GY0}`, 12.45 + i * .1, 12.95 + i * .1, { w: 2, glowW: 7 }));
+  const GOV_ITEMS = ['Catálogo', 'Documentación', 'Responsables', 'Calidad', 'Auditoría', 'Permisos', 'Seguridad'];
+  const govChips = GOV_ITEMS.map((txt, i) => {
+    const cx = 488 + i * 198, g = S('g', { opacity: 0 }, L.gov);
+    const r = S('rect', { x: cx - 88, y: 798, width: 176, height: 44, rx: 22, fill: CARD, stroke: LINE, 'stroke-width': 1.3 }, g);
+    S('circle', { cx: cx - 64, cy: 820, r: 4, fill: Y }, g);
+    T(g, cx + 8, 826, txt, { size: 16.5, family: BODY, weight: 600 });
+    return { g, r, cx, t0: 13.0 + i * .26 };
+  });
+  const govPulse = S('g', { opacity: 0 }, L.heads);
+  S('circle', { r: 22, fill: Y, opacity: .55, filter: 'url(#blur)' }, govPulse);
+  S('circle', { r: 6, fill: '#FFF8B0' }, govPulse);
+  const PULSE = [14.9, 15.8];
+
+  /* ---------- red de IA ---------- */
+  const CORE = { x: 965, y: 70 };
+  const aiNodes = [];
+  (() => {
+    const r = rng(7);
+    let guard = 0;
+    while (aiNodes.length < 24 && guard++ < 4000) {
+      const p = { x: 300 + r() * 1340, y: -20 + r() * 220 };
+      if (Math.hypot(p.x - CORE.x, p.y - CORE.y) < 110) continue;
+      if (aiNodes.every(q => Math.hypot(p.x - q.x, p.y - q.y) > 112)) aiNodes.push(p);
+    }
+  })();
+  const maxD = Math.max(...aiNodes.map(n => Math.hypot(n.x - CORE.x, n.y - CORE.y)));
+  aiNodes.forEach(n => n.t = 16.35 + Math.hypot(n.x - CORE.x, n.y - CORE.y) / maxD * .85);
+  const edgeSet = new Map();
+  const all = [CORE, ...aiNodes]; CORE.t = 16.3;
+  all.forEach((n, i) => {
+    const near = all.map((m, j) => ({ j, d: Math.hypot(m.x - n.x, m.y - n.y) })).filter(o => o.j !== i).sort((a, b) => a.d - b.d).slice(0, i === 0 ? 5 : 2);
+    near.forEach(o => { const k = Math.min(i, o.j) + '-' + Math.max(i, o.j); if (!edgeSet.has(k)) edgeSet.set(k, [all[Math.min(i, o.j)], all[Math.max(i, o.j)]]); });
+  });
+  const aiEdgeG = S('g', {}, L.ai), aiNodeG = S('g', {}, L.ai);
+  const aiEdges = [...edgeSet.values()].map(([a, b], i) => {
+    const el = S('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: '#7E9BE6', 'stroke-width': 1.4, opacity: 0 }, aiEdgeG);
+    const dot = S('circle', { r: 3, fill: Y, opacity: 0 }, aiEdgeG);
+    return { a, b, el, dot, t: Math.max(a.t, b.t), ph: (i * .37) % 1 };
+  });
+  aiNodes.forEach(n => {
+    n.g = S('g', { opacity: 0, transform: `translate(${n.x} ${n.y})` }, aiNodeG);
+    S('circle', { r: 15, fill: '#8FB4FF', opacity: .14 }, n.g);
+    S('circle', { r: 6, fill: INK }, n.g);
+  });
+  const coreG = S('g', { opacity: 0, transform: `translate(${CORE.x} ${CORE.y})` }, aiNodeG);
+  const coreRings = [0, 1].map(() => S('circle', { r: 34, fill: 'none', stroke: Y, 'stroke-width': 1.5 }, coreG));
+  S('circle', { r: 46, fill: Y, opacity: .25, filter: 'url(#blur)' }, coreG);
+  S('circle', { r: 34, fill: CARD, stroke: Y, 'stroke-width': 2.5 }, coreG);
+  T(coreG, 0, 8, 'IA', { size: 24, weight: 700, fill: Y });
+  const nearestAI = (x, y) => aiNodes.reduce((b, n) => Math.hypot(n.x - x, n.y - y) < Math.hypot(b.x - x, b.y - y) ? n : b, aiNodes[0]);
+  const leftAI = aiNodes.reduce((b, n) => n.x < b.x ? n : b), rightAI = aiNodes.reduce((b, n) => n.x > b.x ? n : b);
+  const aiLinks = [
+    (n => `M${N.dm.x} ${NY - 75} C${N.dm.x} ${NY - 200} ${n.x} ${n.y + 120} ${n.x} ${n.y}`)(nearestAI(N.dm.x, 200)),
+    (n => `M${N.pbi.x} ${NY - 75} C${N.pbi.x} ${NY - 200} ${n.x} ${n.y + 120} ${n.x} ${n.y}`)(nearestAI(N.pbi.x, 200)),
+    (n => `M${N.sap.x} ${NY - 75} C${N.sap.x} ${NY - 200} ${n.x} ${n.y + 120} ${n.x} ${n.y}`)(nearestAI(N.sap.x, 200)),
+    `M${GX0} ${(GY0 + GY1) / 2} C${GX0 - 110} ${(GY0 + GY1) / 2} ${leftAI.x - 240} ${leftAI.y} ${leftAI.x} ${leftAI.y}`,
+    `M${GX1} ${(GY0 + GY1) / 2} C${GX1 + 110} ${(GY0 + GY1) / 2} ${rightAI.x + 240} ${rightAI.y} ${rightAI.x} ${rightAI.y}`
+  ].map((d, i) => drawPath(L.ai, d, 16.15 + i * .08, 16.95 + i * .08, { w: 2.2, glowW: 8 }));
+
+  /* ---------- cámara ---------- */
+  const CAM = [
+    [0, 230, 480, 2.1], [2.9, 230, 480, 2.1], [3.7, 780, 480, 1.65], [5.7, 780, 480, 1.65],
+    [6.5, 1320, 480, 1.9], [8.5, 1320, 480, 1.9], [9.3, 1700, 480, 2.0], [10.3, 1700, 480, 1.95],
+    [11.7, 965, 470, .95], [12.1, 965, 470, .95], [12.9, 965, 560, .92], [16.0, 965, 560, .92],
+    [17.0, 965, 400, .68], [20, 965, 400, .64]
+  ];
+  function camAt(t) {
+    let k = 0; while (k < CAM.length - 2 && t >= CAM[k + 1][0]) k++;
+    const [t0, x0, y0, s0] = CAM[k], [t1, x1, y1, s1] = CAM[k + 1];
+    const e = easeIO(prog(t, t0, t1));
+    return { x: lerp(x0, x1, e), y: lerp(y0, y1, e), s: Math.exp(lerp(Math.log(s0), Math.log(s1), e)) };
+  }
+
+  /* ---------- fondo de partículas ---------- */
+  const bg = document.getElementById('bg'), ctx = bg.getContext('2d');
+  const parts = (() => { const r = rng(42); return Array.from({ length: 170 }, () => ({ x: r() * W, y: r() * H, z: .2 + r() * .8, r: .6 + r() * 1.9, vx: (r() - .5) * 14, vy: -4 - r() * 12, ph: r() * 6.28, tw: .6 + r() * 1.8, y2: r() < .14 })); })();
+  function drawBg(t, c, dim) {
+    const g = ctx.createRadialGradient(W * .5, H * .45, 80, W * .5, H * .5, W * .75);
+    g.addColorStop(0, '#0C1A42'); g.addColorStop(.55, '#071030'); g.addColorStop(1, '#03081A');
+    ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    for (const p of parts) {
+      const x = ((p.x + p.vx * t - c.x * p.z * .18) % W + W) % W;
+      const y = ((p.y + p.vy * t * p.z) % H + H) % H;
+      const a = (.25 + .5 * p.z) * (.55 + .45 * Math.sin(t * p.tw + p.ph)) * (1 - dim * .5);
+      const col = p.y2 ? '255,230,0' : '170,195,255';
+      if (p.r > 1.7) { ctx.globalAlpha = a * .22; ctx.fillStyle = `rgb(${col})`; ctx.beginPath(); ctx.arc(x, y, p.r * 4, 0, 6.283); ctx.fill(); }
+      ctx.globalAlpha = a; ctx.fillStyle = `rgb(${col})`; ctx.beginPath(); ctx.arc(x, y, p.r, 0, 6.283); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const v = ctx.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, W * .7);
+    v.addColorStop(0, 'rgba(3,8,26,0)'); v.addColorStop(1, 'rgba(3,8,26,.75)');
+    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  }
+
+  /* ---------- textos de escena ---------- */
+  const SCENES = [
+    { a: 0.35, b: 2.95, eyebrow: 'Origen', lines: [[['Todo comienza con un dato', .55]]], sub: ['SAP · sistema transaccional de origen', 1.0] },
+    { a: 3.3, b: 5.95, eyebrow: 'Integración', lines: [[['Extraer.', 3.75], ['Transformar.', 4.5], ['Validar.', 5.15]]], sub: ['SQL · tablas de aterrizaje · transformaciones', 3.5] },
+    { a: 6.3, b: 8.95, eyebrow: 'Modelado', lines: [[['Datos preparados para el negocio', 6.45]]], sub: ['Data Marts organizados por dominio', 6.8] },
+    { a: 9.3, b: 11.95, eyebrow: 'Analítica', lines: [[['Cada indicador tiene una historia', 9.45]]], sub: ['Power BI · el linaje lleva cada KPI hasta su origen', 10.4] },
+    { a: 12.3, b: 15.95, eyebrow: 'Gobierno', lines: [[['Documentado.', 13.26], ['Trazable.', 13.95], ['Seguro.', 14.56]]], sub: ['Una capa transversal que conecta todas las etapas', 12.5] },
+    { a: 16.25, b: 17.95, eyebrow: 'Futuro', lines: [[['Gobernar los datos hoy.', 16.35]], [['Habilitar la IA del mañana.', 16.8, true]]] }
+  ];
+  const caption = document.getElementById('caption');
+  SCENES.forEach((sc, i) => {
+    const box = document.createElement('div'); box.style.position = 'absolute'; box.style.left = '0'; box.style.top = '0'; box.style.width = '100%';
+    const eb = document.createElement('div'); eb.className = 'eyebrow'; eb.textContent = String(i + 1).padStart(2, '0') + ' — ' + sc.eyebrow; box.appendChild(eb);
+    const h = document.createElement('h1'); h.className = 'headline';
+    sc.words = [];
+    sc.lines.forEach(line => {
+      const row = document.createElement('span'); row.className = 'row';
+      line.forEach(([w, t0, hl]) => { const s = document.createElement('span'); s.className = 'word' + (hl ? ' hl' : ''); s.textContent = w; row.appendChild(s); sc.words.push({ el: s, t0 }); });
+      h.appendChild(row);
+    });
+    box.appendChild(h);
+    if (sc.sub) { const p = document.createElement('div'); p.className = 'sub'; p.textContent = sc.sub[0]; box.appendChild(p); sc.subEl = p; }
+    caption.appendChild(box); sc.box = box; sc.eb = eb;
+  });
+  function revealEl(el, k, dy = 26, bl = 8) {
+    el.style.opacity = k; el.style.transform = `translateY(${(1 - k) * dy}px)`; el.style.filter = k < 1 ? `blur(${(1 - k) * bl}px)` : 'none';
+  }
+
+  const STOPS = [[0, 'Origen'], [3, 'Integración'], [6, 'Modelado'], [9, 'Analítica'], [12, 'Gobierno'], [16, 'IA']];
+  const tracker = document.getElementById('tracker'), trackFill = document.getElementById('trackFill');
+  const stopEls = STOPS.map(([t0, txt]) => {
+    const d = document.createElement('div'); d.className = 'stop'; d.style.left = (t0 / DUR * 100) + '%';
+    d.innerHTML = '<i></i><span></span>'; d.querySelector('span').textContent = txt; tracker.appendChild(d); return { d, t0 };
+  });
+
+  const closing = document.getElementById('closing'), cEyebrow = document.getElementById('cEyebrow'), cTitle = document.getElementById('cTitle'), cRule = document.getElementById('cRule'), cSub = document.getElementById('cSub');
+  const cWords = [['Confianza,', 18.15], ['trazabilidad', 18.35], ['y', 18.5], ['seguridad', 18.6]].map(([w, t0]) => { const s = document.createElement('span'); s.className = 'word'; s.textContent = w; cTitle.appendChild(s); return { el: s, t0 }; });
+  const hud = document.getElementById('hud');
+
+  /* ---------- render(t): todo se deriva del tiempo ---------- */
+  function render(t) {
+    t = clamp(t, 0, DUR);
+    const c = camAt(t);
+    const dim = easeIO(prog(t, 17.75, 18.4));
+    drawBg(t, c, dim);
+    cam.setAttribute('transform', `translate(960 600) scale(${c.s}) translate(${-c.x} ${-c.y})`);
+    cam.setAttribute('opacity', 1 - dim * .82);
+
+    strokes.forEach(s => updateStroke(s, t));
+
+    // pulso del gobierno de datos
+    const pp = prog(t, PULSE[0], PULSE[1]), px = lerp(GX0 + GR, GX1 - GR, easeIO(pp));
+    govPulse.setAttribute('opacity', pp > 0 && pp < 1 ? 1 : 0);
+    govPulse.setAttribute('transform', `translate(${px} ${GY0})`);
+
+    // nodos
+    NODES.forEach((n, i) => {
+      const a = easeOut(prog(t, ARRIVE[i] - .6, ARRIVE[i]));
+      n.g.setAttribute('opacity', a);
+      n.g.setAttribute('transform', `translate(${n.x} ${NY}) scale(${.86 + .14 * a})`);
+      let gl = Math.max(env(t, n.glow[0], n.glow[1], .3, .6), t > n.glow[0] ? .28 : 0);
+      gl = Math.max(gl, env(t, LIN_T[i] - .05, LIN_T[i] + .7, .1, .5));
+      if (pp > 0 && pp < 1) gl = Math.max(gl, Math.exp(-Math.pow((px - n.x) / 110, 2)));
+      if (t > 16.1) gl = Math.max(gl, .5 + .2 * Math.sin(t * 4 + i));
+      n.ring.setAttribute('opacity', gl);
+      n.halo.setAttribute('opacity', gl * .45);
+    });
+
+    // SAP: nace el dato
+    const hiRow = env(t, .8, 3.2, .3, .6);
+    sapRows.forEach((r, i) => r.setAttribute('opacity', i === 2 ? hiRow : 0));
+    const dp = prog(t, 1.0, 1.5);
+    sapDot.setAttribute('opacity', dp > 0 && dp < 1 ? 1 : 0);
+    sapDot.setAttribute('transform', `translate(${lerp(N.sap.x - 84 + 136, N.sap.x + 100, easeIO(dp))} ${NY + 1})`);
+    sapTag.setAttribute('opacity', env(t, 1.7, 3.6, .4, .5));
+
+    // SQL: aterrizaje
+    N.sql.cap.setAttribute('opacity', env(t, 3.5, 5.2, .2, .8) * .55);
+    const detOut = 1 - prog(t, 11.2, 11.8);
+    tables.forEach(tb => {
+      const k = prog(t, tb.t, tb.t + .32);
+      tb.drop.setAttribute('opacity', k > 0 && k < 1 ? 1 : 0);
+      tb.drop.setAttribute('cx', lerp(N.sql.x, tb.cx, easeIO(k))); tb.drop.setAttribute('cy', lerp(NY + 75, 622, easeIO(k)));
+      const a = easeOut(prog(t, tb.t + .25, tb.t + .6)) * detOut;
+      tb.g.setAttribute('opacity', a);
+    });
+
+    // Transformaciones
+    N.trf.gear.setAttribute('transform', `rotate(${t * 18 + easeIO(prog(t, 4.6, 6.0)) * 160})`);
+    N.trf.fx.setAttribute('fill', env(t, 4.6, 6.0) > .5 ? Y : MUTED);
+    trfChips.forEach(ch => showChip(ch, t, detOut));
+
+    // Data Marts
+    N.dm.cubes.forEach((cb, i) => {
+      const k = easeOut(prog(t, 6.75 + i * .3, 7.15 + i * .3));
+      cb.g.setAttribute('transform', `translate(0 ${(1 - k) * -18})`);
+      cb.g.setAttribute('opacity', .25 + .75 * k);
+      cb.top.setAttribute('fill', env(t, 6.75 + i * .3, 9.0, .3, .6) > .5 ? '#6B6A2A' : '#2B4790');
+    });
+    dmChips.forEach(ch => showChip(ch, t, detOut));
+
+    // Power BI
+    N.pbi.bars.forEach((b, i) => { const k = easeOut(prog(t, 9.35 + i * .08, 9.95 + i * .08)); b.el.setAttribute('height', b.h * k); b.el.setAttribute('y', -4 - b.h * k); });
+    N.pbi.clip.setAttribute('width', 172 * easeIO(prog(t, 9.5, 10.2)));
+    N.pbi.arc.setAttribute('stroke-dashoffset', 75.4 * (1 - .72 * easeIO(prog(t, 9.4, 10.1))));
+    N.pbi.kpi.setAttribute('stroke', env(t, 10.3, 12.2, .15, .5) > .3 ? Y : LINE);
+
+    // linaje
+    const linFade = 1 - .7 * prog(t, 12.2, 12.8) - .3 * prog(t, 15.9, 16.3);
+    L.lineage.setAttribute('opacity', linFade);
+    lineageTags.forEach((g, i) => { const k = easeOut(prog(t, LIN_T[i], LIN_T[i] + .3)); g.setAttribute('opacity', k); g.setAttribute('transform', `translate(0 ${(1 - k) * 10})`); });
+    lineageArcs.forEach(ac => { const k = easeIO(prog(t, ac.a, ac.b)); const x = lerp(ac.x1 + 2, ac.x0 - 2, k); ac.rect.setAttribute('x', Math.min(x, ac.x1)); ac.rect.setAttribute('width', Math.abs(ac.x1 + 2 - x)); });
+
+    // gobierno
+    govFill.setAttribute('opacity', easeOut(prog(t, 12.3, 12.9)) * .95);
+    govLabel.setAttribute('opacity', easeOut(prog(t, 12.7, 13.1)));
+    govChips.forEach(ch => {
+      const k = easeOut(prog(t, ch.t0, ch.t0 + .35));
+      ch.g.setAttribute('opacity', k); ch.g.setAttribute('transform', `translate(0 ${(1 - k) * 12})`);
+      const hot = (t > ch.t0 && t < ch.t0 + .7) || (pp > 0 && pp < 1 && Math.abs(px - ch.cx) < 110);
+      ch.r.setAttribute('stroke', hot ? Y : LINE);
+    });
+    connectors.forEach((s, i) => { const hot = pp > 0 && pp < 1 && Math.abs(px - NODES[i].x) < 120; s.core.setAttribute('stroke-width', hot ? 4 : 2); });
+
+    // flujo continuo sobre el hilo
+    segs.forEach((s, i) => flows[i].forEach((dot, k) => {
+      const since = t - s.b; if (since <= 0) { dot.setAttribute('opacity', 0); return; }
+      const u = (since * .7 + k * .5) % 1, pt = s.core.getPointAtLength(u * s.len);
+      dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
+      dot.setAttribute('opacity', Math.min(1, since * 2) * Math.sin(Math.PI * u) * .95);
+    }));
+
+    // red de IA
+    coreG.setAttribute('opacity', easeOut(prog(t, 16.2, 16.6)));
+    coreRings.forEach((r, i) => { const ph = ((t - 16.3) / 1.4 + i * .5) % 1; const on = t > 16.3 ? 1 : 0; r.setAttribute('r', 34 + ph * 44); r.setAttribute('opacity', on * (1 - ph) * .8); });
+    aiNodes.forEach(n => { const k = easeOut(prog(t, n.t, n.t + .3)); n.g.setAttribute('opacity', k * (.75 + .25 * Math.sin(t * 3 + n.x))); });
+    aiEdges.forEach(e => {
+      const k = prog(t, e.t, e.t + .35);
+      e.el.setAttribute('opacity', k * .5);
+      e.el.setAttribute('x2', lerp(e.a.x, e.b.x, k)); e.el.setAttribute('y2', lerp(e.a.y, e.b.y, k));
+      const since = t - e.t - .35;
+      if (since > 0) { const u = (since * .9 + e.ph) % 1; e.dot.setAttribute('cx', lerp(e.a.x, e.b.x, u)); e.dot.setAttribute('cy', lerp(e.a.y, e.b.y, u)); e.dot.setAttribute('opacity', Math.min(1, since * 3) * Math.sin(Math.PI * u)); }
+      else e.dot.setAttribute('opacity', 0);
+    });
+
+    // textos
+    SCENES.forEach(sc => {
+      const out = 1 - prog(t, sc.b - .35, sc.b), vis = t >= sc.a - .05 && t <= sc.b;
+      sc.box.style.visibility = vis ? 'visible' : 'hidden';
+      if (!vis) return;
+      const ek = easeOut(prog(t, sc.a, sc.a + .4)) * out;
+      sc.eb.style.opacity = ek; sc.eb.style.transform = `translateX(${(1 - ek) * -20}px)`;
+      sc.words.forEach(w => revealEl(w.el, easeOut(prog(t, w.t0, w.t0 + .55)) * out));
+      if (sc.subEl) revealEl(sc.subEl, easeOut(prog(t, sc.sub[1], sc.sub[1] + .5)) * out, 14, 4);
+    });
+    hud.style.opacity = easeOut(prog(t, .3, .9)) * (1 - dim);
+    trackFill.style.width = (t / DUR * 100) + '%';
+    tracker.style.opacity = 1 - dim * .65;
+    stopEls.forEach(s => s.d.classList.toggle('on', t >= s.t0));
+
+    // cierre
+    closing.style.visibility = t >= 17.9 ? 'visible' : 'hidden';
+    revealEl(cEyebrow, easeOut(prog(t, 17.95, 18.35)), 12, 4);
+    cWords.forEach(w => revealEl(w.el, easeOut(prog(t, w.t0, w.t0 + .5))));
+    cRule.style.transform = `scaleX(${easeIO(prog(t, 18.55, 19.2))})`;
+    revealEl(cSub, easeOut(prog(t, 18.85, 19.4)), 14, 4);
+  }
+
+  /* ---------- escalado del escenario ---------- */
+  const viewport = document.getElementById('viewport'), frame = document.getElementById('frame'), stage = document.getElementById('stage');
+  function fit() {
+    const r = viewport.getBoundingClientRect();
+    const s = Math.max(.05, Math.min(r.width / W, r.height / H));
+    frame.style.width = (W * s) + 'px'; frame.style.height = (H * s) + 'px';
+    stage.style.transform = `scale(${s})`;
+  }
+  new ResizeObserver(fit).observe(viewport); fit();
+
+  /* ---------- reproducción ---------- */
+  const playBtn = document.getElementById('play'), restartBtn = document.getElementById('restart'), scrub = document.getElementById('scrub'), clock = document.getElementById('clock');
+  let time = 0, playing = false, last = 0;
+  function show(t) { time = clamp(t, 0, DUR); render(time); scrub.value = Math.round(time * 1000); clock.textContent = time.toFixed(2).padStart(5, '0') + ' / 20.00 s'; }
+  function setPlaying(p) { playing = p; playBtn.textContent = p ? 'Pausar' : (time >= DUR ? 'Reproducir' : 'Reanudar'); if (p) { last = performance.now(); requestAnimationFrame(tick); } }
+  function tick(now) {
+    if (!playing) return;
+    show(time + (now - last) / 1000); last = now;
+    if (time >= DUR) { setPlaying(false); return; }
+    requestAnimationFrame(tick);
+  }
+  playBtn.addEventListener('click', () => { if (time >= DUR) show(0); setPlaying(!playing); });
+  restartBtn.addEventListener('click', () => { show(0); setPlaying(true); });
+  scrub.addEventListener('input', () => { setPlaying(false); show(scrub.value / 1000); });
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); playBtn.click(); }
+    if (e.key === 'r' || e.key === 'R') restartBtn.click();
+  });
+
+  window.__seek = show;
+  window.__duration = DUR;
+
+  const fontsReady = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]) : Promise.resolve();
+  fontsReady.then(() => {
+    window.__ready = true;
+    if (RENDER) { show(0); return; }
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { show(19.99); setPlaying(false); }
+    else { show(0); setPlaying(true); }
+  });
+  show(0);
+})();
+</script>

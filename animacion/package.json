@@ -1,0 +1,12 @@
+{
+  "name": "animacion-del-dato-a-la-decision",
+  "private": true,
+  "description": "Animación publicitaria de 20 s: del dato a la decisión con gobierno de datos.",
+  "scripts": {
+    "render": "node render.cjs",
+    "frames": "FRAMES=0,150,300,450,599 node render.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}

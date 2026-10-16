@@ -1,6 +1,6 @@
 // Exporta la animación a MP4 (1920x1080, 30 fps, 20 s) cuadro por cuadro.
 // Requisitos: Node 18+, ffmpeg en el PATH y Playwright (npm install).
-// Uso: node render.cjs [salida.mp4]        Variables: FPS=60, FRAMES=1,90,300 (solo capturas PNG)
+// Uso: node render.cjs [salida.mp4]        Variables: FPS=60, FRAMES=1,90,300 (solo capturas PNG), VOZ=locucion.mp3
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -33,7 +33,12 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta n
     return;
   }
 
-  const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-',
+  // Audio opcional: VOZ=archivo (por defecto voz.mp3/voz.wav junto a este script si existen). Se recorta o completa con silencio a la duración exacta.
+  const voz = process.env.VOZ ? path.resolve(process.env.VOZ) : ['voz.mp3', 'voz.wav', 'voz.m4a'].map(f => path.join(__dirname, f)).find(f => fs.existsSync(f));
+  if (voz && !fs.existsSync(voz)) throw new Error('No existe el archivo de voz: ' + voz);
+  if (voz) console.log('Voz ->', voz);
+  const audioArgs = voz ? ['-i', voz, '-map', '0:v', '-map', '1:a', '-af', 'apad', '-c:a', 'aac', '-b:a', '192k', '-t', String(duration)] : [];
+  const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-', ...audioArgs,
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'medium', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
   const total = Math.round(duration * FPS);
   for (let i = 0; i < total; i++) {

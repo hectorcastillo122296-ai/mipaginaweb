@@ -24,6 +24,23 @@ La línea amarilla recorre SAP → SQL → transformaciones → Data Marts → P
 
 Las etiquetas son genéricas (`LND_01`, "KPI", gráficos sin ejes ni cifras). No hay datos reales ni logos de terceros.
 
+## Guion de voz en off
+
+Unas 50 palabras a ritmo pausado. Cada frase entra al inicio de su escena, con un margen para respirar.
+
+| Entra en | Locución |
+|---|---|
+| 0,3 s | Todo comienza con un dato. |
+| 3,4 s | Lo extraemos, lo transformamos y lo validamos. |
+| 6,4 s | Los Data Marts lo preparan para el negocio. |
+| 9,4 s | Cada indicador tiene una historia que podemos rastrear. |
+| 12,4 s | Un gobierno de datos que documenta, traza y protege cada etapa. |
+| 16,3 s | Gobernar los datos hoy es habilitar la IA del mañana. |
+
+Indicaciones para la voz: tono sereno y seguro, ritmo medio, sin énfasis comercial exagerado. Del segundo 18 al 20 solo queda la música o el silencio, para que el texto de cierre se lea en pantalla.
+
+Si grabas o generas la locución como un solo archivo de 20 s, guárdalo como `voz.mp3` (o `voz.wav`) en esta carpeta. `npm run render` lo mezcla automáticamente. También puedes indicar otro archivo con `VOZ=ruta/al/audio.mp3 npm run render`. Si el audio es más corto se completa con silencio, y si es más largo se recorta a 20 s.
+
 ## Exportar a MP4
 
 Se necesitan Node 18 o superior y `ffmpeg` en el PATH.

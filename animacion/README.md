@@ -39,6 +39,8 @@ Unas 50 palabras a ritmo pausado. Cada frase entra al inicio de su escena, con u
 
 Indicaciones para la voz: tono sereno y seguro, ritmo medio, sin énfasis comercial exagerado. Del segundo 18 al 20 solo queda la música o el silencio, para que el texto de cierre se lea en pantalla.
 
+`voz.wav` es una **voz guía** generada sin conexión con espeak-ng, mezclada con un fondo sintetizado suave. Sirve para revisar los tiempos, pero suena robótica: reemplázala por una locución real antes de publicar. `del-dato-a-la-decision-con-voz.mp4` es el video con esa voz guía.
+
 Si grabas o generas la locución como un solo archivo de 20 s, guárdalo como `voz.mp3` (o `voz.wav`) en esta carpeta. `npm run render` lo mezcla automáticamente. También puedes indicar otro archivo con `VOZ=ruta/al/audio.mp3 npm run render`. Si el audio es más corto se completa con silencio, y si es más largo se recorta a 20 s.
 
 ## Exportar a MP4
